@@ -7,6 +7,7 @@ Course project submission for Coursera course getdata-007 (Getting and Cleaning 
 The purpose of this project is to demonstrate my ability to collect, work with, and clean a data set.  A data set was given related to fitness trackers on a cell phone (using accelerometers).  The author (I) have followed the Project Instructions to the best of my ability, and used my judgement when required.
 Without intimate knowledge of the physics involved, several assumptions were made regarding the nature and meaning of the dataset - specifically what are variables vs. observations.  For the purpose of this assignment, it is assumed that the only quantitative variables are mean and standard deviation (whereas the measurement types are observations).  The auther acknowledges that this could be interpreted otherwise; however, feels it results in the tidiest data set possible.
 This repository contains this three files:
+
 * CODEBOOK.md
 * README.md
 * run_analysis.r
@@ -18,6 +19,7 @@ This file, it contains an overview of the data repository, and the algorithms us
 
 ### run_analysis.r 
 This file contains the code submission.  It completes the following tasks:
+
 * Download the data to a ./data subfolder (if not already downloaded)
 * Unzip the data file to the working directory (overwrites existing files)
 * Read the training and test data sets
@@ -27,7 +29,7 @@ This file contains the code submission.  It completes the following tasks:
 ## Run Analysis Code
 ### Functions
 The *run_analysis.r* file contains the following functions:
-* run_analysis() - main function
+* run_analysis() - main function (containing Steps 1-5)
 * download_unzip(url, fname) - helper function
 * getActivityData(fname) - helper function
 * cleanColumns() - helper function

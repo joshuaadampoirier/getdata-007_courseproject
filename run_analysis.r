@@ -40,6 +40,7 @@ run_analysis <- function() {
     data <- rbind_list(trainingData, testData)
     rm(columnNames, trainingData, testData)     # cleanup memory
     
+    
     ## ** PART TWO **
     ## ###############################################################################################
     ## PURPOSE: Extract only the measurements on the mean and standard deviation
@@ -53,6 +54,7 @@ run_analysis <- function() {
                    -contains("meanFreq"), 
                    -contains("angle"), 
                    -contains("gravityMean")) 
+    
     
     ## ** PART THREE **
     ## ###############################################################################################
@@ -73,6 +75,7 @@ run_analysis <- function() {
                                col.names = "SubjectKey")
     SubjectKey <- rbind_list(trainingSubjects, testSubjects)
     data <- cbind(ActivityLabel, SubjectKey, data)
+    
     
     ## ** PART FOUR ** Appropriately label the data set with descriptive variable names
     ##      NOTE:   1) This part utilizes the toFactors() function, converting several of the variables
@@ -99,6 +102,7 @@ run_analysis <- function() {
     data <- toFactors(data)
     write.table(data, file="tidyData.txt", sep=",", row.name=FALSE)
     
+    
     ## ** PART FIVE **
     ## ###############################################################################################
     ## PURPOSE: Create a second, independent tidy data set with the average of each variable for each
@@ -112,7 +116,9 @@ run_analysis <- function() {
                             FUN = mean))
     names(data2) <- c("Measurement", "Component", "Domain", "Activity", "SubjectKey", "Mean_mean", "Mean_std")
     write.table(data2, file="tidySummary.txt", sep=",", row.name=FALSE)
-    data2
+
+    data2    
+    
 }
 
 ## ####################################################################################################
