@@ -1,4 +1,4 @@
-## ####################################################################################################
+## ###################################################################################################
 ## AUTHOR:      Joshua Poirier
 ## Course:      Coursera getdata-007
 ## Instructor:  Jeff Leek
@@ -8,58 +8,111 @@
 ##
 ## NOTES:       OS:     Windows 7 Professional
 ##              RAM:    6.00 GB
-## ####################################################################################################
+## ASSUMPTIONS: Without intimate knowledge of the physics involved, or access to personnel with such
+##              knowledge, several assumptions are made about the dataset regarding what are 
+##              'variables' and what are 'observations'.  For the purposes of this exercise, the only
+##              quantitative variables under consideration are mean and standard deviation for each
+##              measurement.  The measurements themselves will be considered to be variables, as are
+##              their domain.  The author recognizes that this could be interpreted otherwise;
+##              however, it is the author's opinion that the methods taken result in the tidyest data
+##              set.
+## ###################################################################################################
 run_analysis <- function() {
     
     library(dplyr)
     library(tidyr)
     
-    ## Download and unzip the data set (uses download_unzip() function found below)
+    ## Download and unzip the data set
     download_unzip(url = "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip",
                    fname = "getdata-projectfiles-UCI HAR Dataset.zip")
     
-    ## Read the data - add 'Status' column indicating training or test data
-    ##      NOTE:  Assume features.txt is clean and does not require modifications
+    ## ** PART ONE **
+    ## ###############################################################################################
+    ## PURPOSE: Read and merge the training and test data sets into one data set
+    ## NOTES:   1)  The downloaded zip file was extracted to the working directory, so the files are
+    ##              located in the 'UCI HAR Dataset' subfolder
+    ##          2)  Assume whether the dataset is 'training' or 'test' is irrelevant (we don't need
+    ##              to add a status variable), as it is not mentioned in the project outline
+    ## ###############################################################################################
     columnNames <- cleanColumns()
     trainingData <- read.table("./UCI HAR Dataset/train/X_train.txt", col.names = columnNames)
     testData <- read.table("./UCI HAR Dataset/test/X_test.txt", col.names = columnNames)
-    trainingData$Status = "Training"
-    testData$Status = "Test"
-    
-    ## ** PART ONE ** Merge the training and test sets
     data <- rbind_list(trainingData, testData)
     rm(columnNames, trainingData, testData)     # cleanup memory
     
-    ## ** PART TWO ** Extract only the measurements on the mean and standard deviation
-    data <- select(data, contains("mean"), contains("std"), -contains("meanFreq"), -contains("angle"), -contains("gravityMean")) 
+    ## ** PART TWO **
+    ## ###############################################################################################
+    ## PURPOSE: Extract only the measurements on the mean and standard deviation
+    ## NOTES:   1)  Assume that we can ignore those columns containing "meanFreq", "angle", and 
+    ##              "gravityMean" as they are not a true mean or standard deviation for their
+    ##              respective measurements
+    ## ###############################################################################################
+    data <- select(data, 
+                   contains("mean"), 
+                   contains("std"), 
+                   -contains("meanFreq"), 
+                   -contains("angle"), 
+                   -contains("gravityMean")) 
     
-    ## ** PART THREE ** Create descriptive activity variable column by linking the 'X' data files with
-    ##                  the 'Y' activity data and 'activity labels' files
-    ##      NOTE:   1)  This part utilizes the getActivityData() function found below
-    ##              2)  We will also add a "subject" variable based on subject_test.txt and 
-    ##                  subject_train.txt
+    ## ** PART THREE **
+    ## ###############################################################################################
+    ## PURPOSE: Use the descriptive activity names (from activity_labels.txt) to name the activities
+    ##          in the data set
+    ## NOTES:   1)  Must first read in and merge the training/test activity data files, and merge with
+    ##              the main data frame.  It is implicit that the order of the rows match, so column
+    ##              binding is acceptable.
+    ##          2)  The activity data is read by the getActivityData() function found below.
+    ##          3)  We also add the training/test subject data in this step
+    ## ###############################################################################################
     trainingAct <- getActivityData("./UCI HAR Dataset/train/y_train.txt")
     testAct <- getActivityData("./UCI HAR Dataset/test/y_test.txt")
     ActivityLabel <- rbind_list(trainingAct, testAct)$ActivityLabel
-    trainingSubjects <- read.table("./UCI HAR Dataset/train/subject_train.txt", col.names = "SubjectKey")
-    testSubjects <- read.table("./UCI HAR Dataset/test/subject_test.txt", col.names = "SubjectKey")
+    trainingSubjects <- read.table("./UCI HAR Dataset/train/subject_train.txt", 
+                                   col.names = "SubjectKey")
+    testSubjects <- read.table("./UCI HAR Dataset/test/subject_test.txt", 
+                               col.names = "SubjectKey")
     SubjectKey <- rbind_list(trainingSubjects, testSubjects)
     data <- cbind(ActivityLabel, SubjectKey, data)
     
+    ## ** PART FOUR ** Appropriately label the data set with descriptive variable names
+    ##      NOTE:   1) This part utilizes the toFactors() function, converting several of the variables
+    ##              to factors
+    ##              2) It also adds an 'obsNum' observation number column - just an ID variable
     ## ** PART FOUR **
+    ## ###############################################################################################
+    ## PURPOSE: Appropriately label the data set with descriptive variable names
+    ## NOTES:   1)  We add an 'obsNum' observation number column - just a unique ID variable
+    ##          2)  This part uses the function toFactors() found below - this converts a number of
+    ##              the variables to factors (used in Part Five).
+    ## ###############################################################################################
     data$obsNum <- seq_len(nrow(data))
-    data <- gather(data, variable, statisticValue, -ActivityLabel, -SubjectKey, -obsNum, -contains("angle"))
+    data <- gather(data, 
+                   variable, 
+                   statisticValue, 
+                   -ActivityLabel, 
+                   -SubjectKey, 
+                   -obsNum, 
+                   -contains("angle"))
     data <- separate(data, col = variable, into = c("Domain", "variable"), sep = 1)
     data <- separate(data, col = variable, into = c("measurement", "statistic", "component"))
     data <- spread(data, statistic, statisticValue)
-    
-    ## TO DO:
-        ## Convert components which are string "NA" to actual NA's
-        ## To factors: ActivityLabel, SubjectKey, obsNum, Domain, measurement, component
+    data <- toFactors(data)
+    write.table(data, file="tidyData.txt", sep=",", row.name=FALSE)
     
     ## ** PART FIVE **
-    
-    data
+    ## ###############################################################################################
+    ## PURPOSE: Create a second, independent tidy data set with the average of each variable for each
+    ##          activity and each subject.
+    ## NOTES:   1)  Since we have created qualitative variables for Activity, Subject, Domain, 
+    ##              Measurement, and Component - we will have to aggregate on all of these
+    ## ###############################################################################################
+    data2 <- with(data,
+                  aggregate(data.frame(data$mean, data$std), 
+                            by=list(measurement, component, Domain, ActivityLabel, SubjectKey),
+                            FUN = mean))
+    names(data2) <- c("Measurement", "Component", "Domain", "Activity", "SubjectKey", "Mean_mean", "Mean_std")
+    write.table(data2, file="tidySummary.txt", sep=",", row.name=FALSE)
+    data2
 }
 
 ## ####################################################################################################
@@ -103,17 +156,28 @@ getActivityData <- function(fname) {
     
 }
 
+## ###################################################################################################
+## This function performs a variety of tasks to clean the names of the columns in the original data
+## frame.  This includes removing brackets, and re-ordering the location of vector components (ie x,
+## y, and z).
+## PRE:     none
+## POST:    a character vector containing the 'clean' column names (relating to the data set) is
+##          returned
+## ###################################################################################################
 cleanColumns <- function() {
     
+    ## read in column names from the features.txt file
     columnNames <- read.table("./UCI HAR Dataset/features.txt", stringsAsFactors = FALSE)[,2]
+
+    ## start cleaning the column names
     columnNames <- gsub("()", "", columnNames, fixed = TRUE)
     
     for(i in 1:length(columnNames)) {
         if (substring(columnNames[i], nchar(columnNames[i]) - 3) == "mean") {
-            columnNames[i] <- paste(columnNames[i], "-NA")
+            columnNames[i] <- paste(columnNames[i], "-Scalar")
         }
         else if (substring(columnNames[i], nchar(columnNames[i]) - 2) == "std") {
-            columnNames[i] <- paste(columnNames[i], "-NA")
+            columnNames[i] <- paste(columnNames[i], "-Scalar")
         }
     }
     
@@ -127,4 +191,22 @@ cleanColumns <- function() {
     
     columnNames
     
+}
+
+## ###################################################################################################
+## This function converts several of the variables in the data set to factors (as they are qualitative
+## variables - not quantitative!).
+## PRE:     data - the data frame containing variables to be converted to factors
+## POST:    data - the data frame containing converted variables is returned
+## ###################################################################################################
+toFactors <- function(data) {
+
+    ## convert variables to factors
+    data$ActivityLabel <- as.factor(data$ActivityLabel)
+    data$SubjectKey <- as.factor(data$SubjectKey)
+    data$Domain <- as.factor(data$Domain)
+    data$measurement <- as.factor(data$measurement)
+    data$component <- as.factor(data$component) 
+    
+    data
 }
